@@ -70,6 +70,6 @@ u_init = np.dot(np.dot(interpolate(u0, V).vector().array(),U),
 Y2 = np.zeros((nPC, nT))
 Y2[:, 0] = u_init
 for i in range(1, nT):
-    Y2[:, i] = np.dot(K, Y2[:, i - 1])
+    Y2[:, i] = np.dot(np.inv(K), Y2[:, i - 1])
 
 
