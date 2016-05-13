@@ -50,7 +50,6 @@ pc = Function(V)
 for i in range(nPC):
     pc.vector().set_local(Phi[:,i])
     plot(pc)
-    time.sleep(2)
 
 # time stepping is not working...
 
@@ -64,14 +63,14 @@ for i in range(nPC):
         Phi_i.vector().set_local(Phi[:, i])
         Phi_j.vector().set_local(Phi[:, j])
         # using assemble as a numerical integrator
-        integral =  assemble(inner(grad(Phi_i), grad(Phi_j)) * dx)
+
+        print 'i={},j={},Int={}'.format(i,j,assemble(inner(grad(Phi_i), grad(Phi_j)) * dx))
+        integral = assemble(Phi_i * Phi_j * dx) + dt * assemble(inner(grad(Phi_i), grad(Phi_j)) * dx)
 
         K[i,j] += integral
         K[j,i] += integral
 
-K += np.eye(nPC)
-
-
+K = np.linalg.inv(K)
 
 
 # now to do the time stepping, we just solve U^k = K * U^k-1
@@ -81,15 +80,15 @@ u_init = np.dot(np.dot(interpolate(u0, V).vector().array(), u),
 Y2 = np.zeros((nPC, nT))
 Y2[:, 0] = u_init
 for i in range(1, nT):
-    Y2[:, i] = np.dot(np.linalg.inv(K), Y2[:, i - 1])
+    Y2[:, i] = np.dot(K, Y2[:, i - 1])
 
 
 # now map them back to our original basis
-Y3 = np.dot(np.dot(u, np.diag(s))[:,:nPC], Y2)
+Y3 = np.dot(Phi, Y2)
 
 u_interp = Function(V)
 
 for i in range(nT):
     u_interp.vector().set_local(Y3[:, i])
     plot(u_interp)
-    time.sleep(10)
+    time.sleep(0.5)
