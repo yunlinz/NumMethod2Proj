@@ -40,7 +40,6 @@ for i in range(nT):
     Y[:, i] = u.vector().array()
     plot(u, interactive=False)
 
-# Save solution in VTK format
 U, S, V = np.linalg.svd(Y)
 
 plt.semilogy(S)
@@ -49,6 +48,7 @@ plt.show()
 nPC = 5 # only want 5 PC's
 Phi = np.dot(U, S)[:, nPC]
 
+# now construct the our time stepping matrices
 Phi_i = Function(V)
 Phi_j = Function(V)
 K = np.zeros((nPC, nPC))
@@ -56,6 +56,7 @@ for i in range(nPC):
     for j in range(i, nPC):
         Phi_i.vector().set_local(Phi[:, i])
         Phi_j.vector().set_local(Phi[:, j])
+        # using assemble as a numerical integrator
         K[i,j] -= assemble(inner(grad(Phi_i), grad(Phi_j)) * dx)
         k[j,i] -= assemble(inner(grad(Phi_i), grad(Phi_j)) * dx)
 
