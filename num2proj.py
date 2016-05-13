@@ -2,6 +2,7 @@
 
 from dolfin import *
 import numpy as np
+import time
 from sklearn import decomposition as decomp
 import matplotlib.pyplot as plt
 
@@ -13,7 +14,7 @@ V = FunctionSpace(mesh, "Lagrange", 1)
 u = TrialFunction(V)
 v = TestFunction(V)
 
-u0 = Expression("10*sin(-(pow(x[0]-1, 2) + pow(x[1] + 1, 2)) / 0.02)")
+u0 = Expression("10*exp(-(pow(x[0], 2) + pow(x[1], 2)) / 0.02)")
 u0.t = 0
 
 u1 = interpolate(u0, V)
@@ -37,11 +38,22 @@ for i in range(nT):
     solve(A, u.vector(), b)
     u1.assign(u)
     Y[:, i] = u.vector().array()
+    plot(u)
 
 u, s, v = np.linalg.svd(Y, full_matrices=False)
 
 nPC = 5 # only want 5 PC's
 Phi = np.dot(u, np.diag(s))[:, :nPC]
+
+# let's plot the PC's
+pc = Function(V)
+for i in range(nPC):
+    pc.vector().set_local(Phi[:,i])
+    plot(pc)
+    time.sleep(2)
+
+# time stepping is not working...
+
 
 # now construct the our time stepping matrices
 Phi_i = Function(V)
@@ -60,6 +72,8 @@ for i in range(nPC):
 K += np.eye(nPC)
 
 
+
+
 # now to do the time stepping, we just solve U^k = K * U^k-1
 u_init = np.dot(np.dot(interpolate(u0, V).vector().array(), u),
                 np.linalg.inv(np.diag(s))).T[:nPC] # map this into PCA space to get our initial U^0
@@ -70,3 +84,12 @@ for i in range(1, nT):
     Y2[:, i] = np.dot(np.linalg.inv(K), Y2[:, i - 1])
 
 
+# now map them back to our original basis
+Y3 = np.dot(np.dot(u, np.diag(s))[:,:nPC], Y2)
+
+u_interp = Function(V)
+
+for i in range(nT):
+    u_interp.vector().set_local(Y3[:, i])
+    plot(u_interp)
+    time.sleep(10)
