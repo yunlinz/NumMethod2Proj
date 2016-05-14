@@ -57,21 +57,27 @@ for i in range(nPC):
 # now construct the our time stepping matrices
 Phi_i = Function(V)
 Phi_j = Function(V)
+
 K = np.zeros((nPC, nPC))
+M = np.zeros((nPC, nPC))
+
+
 for i in range(nPC):
     for j in range(i, nPC):
         Phi_i.vector().set_local(Phi[:, i])
         Phi_j.vector().set_local(Phi[:, j])
         # using assemble as a numerical integrator
 
+        integral1 = assemble(Phi_i * Phi_j * dx)
+        integral2 = dt * assemble(inner(grad(Phi_i), grad(Phi_j)) * dx)
+
         print 'i={},j={},Int={}'.format(i,j,assemble(inner(grad(Phi_i), grad(Phi_j)) * dx))
-        integral = assemble(Phi_i * Phi_j * dx) + dt * assemble(inner(grad(Phi_i), grad(Phi_j)) * dx)
 
-        K[i,j] += integral
-        K[j,i] += integral
+        K[i,j] = integral1 + integral2
+        K[j,i] = integral1 + integral2
 
-K = np.linalg.inv(K)
-
+        M[i,j] = integral1
+        M[j,i] = integral1
 
 # now to do the time stepping, we just solve U^k = K * U^k-1
 u_init = np.dot(np.dot(interpolate(u0, V).vector().array(), u),
@@ -80,7 +86,7 @@ u_init = np.dot(np.dot(interpolate(u0, V).vector().array(), u),
 Y2 = np.zeros((nPC, nT))
 Y2[:, 0] = u_init
 for i in range(1, nT):
-    Y2[:, i] = np.dot(K, Y2[:, i - 1])
+    Y2[:, i] = np.linalg.solve(K, np.dot(M, Y2[:, i-1]).T).T
 
 
 # now map them back to our original basis
